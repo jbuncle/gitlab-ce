@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:14.04
 
 # Install required packages
 RUN apt-get update -q \
@@ -9,6 +9,11 @@ RUN apt-get update -q \
       apt-transport-https \
       vim \
       curl
+
+# Download & Install GitLab
+# If you run GitLab Enterprise Edition point it to a location where you have downloaded it.
+#RUN echo "deb https://packages.gitlab.com/gitlab/gitlab-ce/ubuntu/ `lsb_release -cs` main" > /etc/apt/sources.list.d/gitlab_gitlab-ce.list
+#RUN wget -q -O - https://packages.gitlab.com/gpg.key | apt-key add -
 
 RUN curl -s https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.deb.sh > script.deb.sh && bash script.deb.sh
 RUN apt-get update && apt-get install -yq --no-install-recommends  gitlab-ce=10.8.7-ce.0
