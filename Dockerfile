@@ -11,7 +11,13 @@ RUN apt-get update -q \
       curl
 
 RUN curl -s https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.deb.sh > script.deb.sh && bash script.deb.sh
-RUN apt-get update && apt-get install -yq --no-install-recommends  gitlab-ce=10.8.7-ce.0
+
+# Attempt to fix sticking at "ruby_block[supervise_rabbitmq_sleep] action run"
+# Result of being unable to determine what startup mechanism system uses
+# https://stackoverflow.com/questions/26614489/chef-server-stuck-ruby-blocksupervise-rabbitmq-sleep-action-run-on-docker-cont
+RUN dpkg-divert --local --rename --add /sbin/initctl && ln -sf /bin/true /sbin/initctl
+
+RUN apt-get update && apt-get install -y --no-install-recommends  gitlab-ce=10.8.7-ce.0
 
 # Manage SSHD through runit
 RUN mkdir -p /opt/gitlab/sv/sshd/supervise \
@@ -34,7 +40,7 @@ RUN ( \
   cp /etc/gitlab/gitlab.rb /assets/gitlab.rb
 
 # Expose web & ssh
-EXPOSE 80
+EXPOSE 80 22
 
 # Define data volumes
 VOLUME ["/etc/gitlab", "/var/opt/gitlab", "/var/log/gitlab"]
