@@ -1,4 +1,5 @@
-FROM ubuntu:18.04
+
+FROM ubuntu:16.04
 
 # Install required packages
 RUN apt-get update -q \
@@ -11,11 +12,24 @@ RUN apt-get update -q \
       tzdata \
       curl
 
-ENV VERSION=10.8.7-ce.0
+ENV TERM xterm
+
+# DOwnload and install gitlab
+ENV VERSION=11.11.8-ce.0
 RUN wget -O /tmp/gitlab.deb --content-disposition https://packages.gitlab.com/gitlab/gitlab-ce/packages/debian/jessie/gitlab-ce_${VERSION}_amd64.deb/download.deb && \
     dpkg -i /tmp/gitlab.deb && \
     rm /tmp/gitlab.deb && \
     rm -rf /var/lib/apt/lists/*
+
+
+# Remove current gitlab.rb file
+RUN rm -f /etc/gitlab/gitlab.rb # Patch omnibus package && \
+        sed -i "s/external_url 'GENERATED_EXTERNAL_URL'/# external_url 'GENERATED_EXTERNAL_URL'/" /opt/gitlab/etc/gitlab.rb.template && \
+        sed -i "s/\/etc\/gitlab\/gitlab.rb/\/assets\/gitlab.rb/" /opt/gitlab/embedded/cookbooks/gitlab/recipes/show_config.rb && \
+        sed -i "s/\/etc\/gitlab\/gitlab.rb/\/assets\/gitlab.rb/" /opt/gitlab/embedded/cookbooks/gitlab/recipes/config.rb
+
+# Set install type to docker
+RUN echo 'gitlab-docker' > /opt/gitlab/embedded/service/gitlab-rails/INSTALLATION_TYPE
 
 
 # Manage SSHD through runit

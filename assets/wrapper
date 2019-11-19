@@ -10,12 +10,48 @@ function sigterm_handler() {
 
 trap "sigterm_handler; exit" TERM
 
+
+
+
+function prepareServices() {
+    echo "Preparing services..."
+    rm -f /opt/gitlab/service/*
+    ln -s /opt/gitlab/sv/sshd /opt/gitlab/service
+    ln -sf /opt/gitlab/embedded/bin/sv /opt/gitlab/init/sshd
+    mkdir -p /var/run/sshd
+    mkdir -p /var/log/gitlab/sshd
+    mkdir -p /var/log/gitlab/reconfigure
+
+}
+
+function dbMigrate() {
+    # Make sure postgres is up to date 
+    gitlab-ctl start postgresql
+#    gitlab-ctl pg-upgrade -w
+
+#    gitlab-ctl start postgresql
+    gitlab-rake db:migrate
+}
+
 function entrypoint() {
+#    prepareServices
+
+    # Start services
     /opt/gitlab/embedded/bin/runsvdir-start &
-    gitlab-ctl reconfigure # will also start everything
+
+#    dbMigrate
+#    gitlab-rake db:migrate
+#    gitlab-ctl prometheus-upgrade &
+#    GITLAB_OMNIBUS_CONFIG= /opt/gitlab/embedded/bin/runsvdir-start &
+    # Fix "No migration with version number "
+    unset VERSION
+    gitlab-ctl reconfigure
+#    gitlab-ctl prometheus-upgrade --skip-data-migration
+
+#    dbMigrate
+#    gitlab-ctl reset-grafana
     gitlab-ctl tail # tail all logs
 }
 
 entrypoint
-
-
+wait
