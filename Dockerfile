@@ -1,3 +1,8 @@
+# Download gitlab as own stage
+FROM alpine AS fetch-gitlab
+RUN  apk --update add openssl wget && rm -rf /var/cache/apk/*
+ARG VERSION=13.0.5-ce.0
+RUN wget -O gitlab.deb --content-disposition https://packages.gitlab.com/gitlab/gitlab-ce/packages/debian/jessie/gitlab-ce_${VERSION}_amd64.deb/download.deb
 
 FROM ubuntu:16.04
 
@@ -14,15 +19,15 @@ RUN apt-get update -q \
 
 ENV TERM xterm
 
-# DOwnload and install gitlab
-ENV VERSION=11.11.8-ce.0
-RUN wget -O /tmp/gitlab.deb --content-disposition https://packages.gitlab.com/gitlab/gitlab-ce/packages/debian/jessie/gitlab-ce_${VERSION}_amd64.deb/download.deb && \
-    dpkg -i /tmp/gitlab.deb && \
+# Install gitlab
+
+COPY --from=fetch-gitlab gitlab.deb  /tmp/gitlab.deb
+RUN dpkg -i /tmp/gitlab.deb && \
     rm /tmp/gitlab.deb && \
     rm -rf /var/lib/apt/lists/*
 
 
-# Remove current gitlab.rb file
+# Remove existing gitlab.rb file and point to /assets/gitlab.rb (added later)
 RUN rm -f /etc/gitlab/gitlab.rb # Patch omnibus package && \
         sed -i "s/external_url 'GENERATED_EXTERNAL_URL'/# external_url 'GENERATED_EXTERNAL_URL'/" /opt/gitlab/etc/gitlab.rb.template && \
         sed -i "s/\/etc\/gitlab\/gitlab.rb/\/assets\/gitlab.rb/" /opt/gitlab/embedded/cookbooks/gitlab/recipes/show_config.rb && \
@@ -43,15 +48,6 @@ RUN mkdir -p /opt/gitlab/sv/sshd/supervise \
 # Disabling use DNS in ssh since it tends to slow connecting
 RUN echo "UseDNS no" >> /etc/ssh/sshd_config
 
-# Prepare default configuration
-RUN ( \
-  echo "" && \
-  echo "# Docker options" && \
-  echo "# Prevent Postgres from trying to allocate 25% of total memory" && \
-  echo "postgresql['shared_buffers'] = '1MB'" ) >> /etc/gitlab/gitlab.rb && \
-  mkdir -p /assets/ && \
-  cp /etc/gitlab/gitlab.rb /assets/gitlab.rb
-
 # Expose web & ssh
 EXPOSE 80 22
 
@@ -59,8 +55,9 @@ EXPOSE 80 22
 VOLUME ["/etc/gitlab", "/var/opt/gitlab", "/var/log/gitlab"]
 
 # Copy assets
-COPY assets/wrapper /usr/local/bin/
+COPY assets /assets
 
+RUN ln -sf /assets/wrapper /usr/local/bin/wrapper 
 
 RUN ["chmod", "+x", "/usr/local/bin/wrapper"]
 ENTRYPOINT ["bash"]
