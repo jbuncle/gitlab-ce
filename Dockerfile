@@ -4,7 +4,7 @@ RUN  apk --update add openssl wget && rm -rf /var/cache/apk/*
 ARG VERSION=13.11.3-ce.0
 RUN wget -O gitlab.deb --content-disposition https://packages.gitlab.com/gitlab/gitlab-ce/packages/debian/buster/gitlab-ce_${VERSION}_amd64.deb/download.deb
 
-FROM ubuntu:16.04
+FROM ubuntu:20.10
 
 # Install required packages
 RUN apt-get update -q \
